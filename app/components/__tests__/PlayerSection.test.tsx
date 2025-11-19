@@ -12,6 +12,8 @@ describe("PlayerSection", () => {
         handOutcomes={[]}
         activeHandIndex={0}
         roundOver={true}
+        isDealing={false}
+        dealerHoleRevealed={false}
       />,
     );
     expect(screen.getByText("Player")).toBeInTheDocument();
@@ -26,6 +28,8 @@ describe("PlayerSection", () => {
         handOutcomes={[]}
         activeHandIndex={0}
         roundOver={true}
+        isDealing={false}
+        dealerHoleRevealed={false}
       />,
     );
     expect(screen.getByText("Place a bet and deal to begin.")).toBeInTheDocument();
@@ -41,6 +45,8 @@ describe("PlayerSection", () => {
         handOutcomes={[null]}
         activeHandIndex={0}
         roundOver={false}
+        isDealing={false}
+        dealerHoleRevealed={false}
       />,
     );
     expect(screen.getByText("K♠")).toBeInTheDocument();
@@ -57,6 +63,8 @@ describe("PlayerSection", () => {
         handOutcomes={[null]}
         activeHandIndex={0}
         roundOver={false}
+        isDealing={false}
+        dealerHoleRevealed={false}
       />,
     );
     expect(screen.getByText(/Hand 1/)).toBeInTheDocument();
@@ -72,6 +80,8 @@ describe("PlayerSection", () => {
         handOutcomes={[null]}
         activeHandIndex={0}
         roundOver={false}
+        isDealing={false}
+        dealerHoleRevealed={false}
       />,
     );
     expect(screen.getByText(/Your turn/)).toBeInTheDocument();
@@ -87,6 +97,8 @@ describe("PlayerSection", () => {
         handOutcomes={[null]}
         activeHandIndex={0}
         roundOver={false}
+        isDealing={false}
+        dealerHoleRevealed={false}
       />,
     );
     expect(screen.getByText(/Bet: \$50/)).toBeInTheDocument();
@@ -102,6 +114,8 @@ describe("PlayerSection", () => {
         handOutcomes={[null]}
         activeHandIndex={0}
         roundOver={false}
+        isDealing={false}
+        dealerHoleRevealed={false}
       />,
     );
     expect(screen.getByText(/Total: 10/)).toBeInTheDocument();
@@ -117,6 +131,8 @@ describe("PlayerSection", () => {
         handOutcomes={["Win"]}
         activeHandIndex={0}
         roundOver={true}
+        isDealing={false}
+        dealerHoleRevealed={true}
       />,
     );
     expect(screen.getByText(/Won \$50/)).toBeInTheDocument();
@@ -135,10 +151,29 @@ describe("PlayerSection", () => {
         handOutcomes={[null, null]}
         activeHandIndex={0}
         roundOver={false}
+        isDealing={false}
+        dealerHoleRevealed={false}
       />,
     );
     expect(screen.getByText(/Hand 1/)).toBeInTheDocument();
     expect(screen.getByText(/Hand 2/)).toBeInTheDocument();
+  });
+
+  it("should not show 'Your turn' when dealer is hitting", () => {
+    const hands = [[createCardInstance("K", "♠", 10)]];
+    render(
+      <PlayerSection
+        playerHands={hands}
+        playerTotals={[10]}
+        handBets={[50]}
+        handOutcomes={[null]}
+        activeHandIndex={0}
+        roundOver={false}
+        isDealing={true}
+        dealerHoleRevealed={true}
+      />,
+    );
+    expect(screen.queryByText(/Your turn/)).not.toBeInTheDocument();
   });
 });
 

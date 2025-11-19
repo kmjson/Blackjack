@@ -427,21 +427,22 @@ export const useBlackjackGame = () => {
 
   /**
    * Player action: Split (split a pair into two separate hands).
-   * - Can only be done when player has exactly one hand with two cards of the same rank
+   * - Can be done on any hand with two cards of the same value (allows resplitting)
    * - Requires sufficient balance to place a second bet
    * - Splits the two cards into separate hands
    * - Deals one card to each new hand
    * - Player then plays each hand separately
    */
   const handleSplit = useCallback(async () => {
-    const currentBet = handBets[0] ?? 0;
+    const currentHand = playerHands[activeHandIndex];
+    const currentBet = handBets[activeHandIndex] ?? 0;
     // Validate split conditions
     if (
       roundOver ||
       isDealing ||
-      playerHands.length !== 1 || // Must have exactly one hand
-      playerHands[0].length !== BLACKJACK_HAND_LENGTH || // Must have exactly 2 cards
-      playerHands[0][0].rank !== playerHands[0][1].rank || // Cards must have same rank
+      !currentHand ||
+      currentHand.length !== BLACKJACK_HAND_LENGTH || // Must have exactly 2 cards
+      currentHand[0].value !== currentHand[1].value || // Cards must have same value
       currentBet === 0 ||
       balance < currentBet // Need balance for second bet
     ) {
@@ -449,7 +450,7 @@ export const useBlackjackGame = () => {
     }
 
     let workingDeck = deck;
-    const [firstCard, secondCard] = playerHands[0];
+    const [firstCard, secondCard] = currentHand;
 
     // Draw cards for both split hands
     const firstDraw = drawCard(workingDeck);
@@ -458,26 +459,42 @@ export const useBlackjackGame = () => {
     workingDeck = secondDraw.rest;
 
     // Create two separate hands from the split cards
-    const splitHands: CardInstance[][] = [[firstCard], [secondCard]];
-    const splitBets: number[] = [currentBet, currentBet]; // Each hand gets the same bet
+    const newHand1 = [firstCard];
+    const newHand2 = [secondCard];
+
+    // Build new hands array: replace the split hand with two new hands
+    const newHands = [...playerHands];
+    newHands.splice(activeHandIndex, 1, newHand1, newHand2);
+
+    // Build new bets array: insert bet for second hand
+    const newBets = [...handBets];
+    newBets.splice(activeHandIndex, 1, currentBet, currentBet);
+
+    // Build new outcomes array: insert outcome for second hand
+    const newOutcomes = [...handOutcomes];
+    newOutcomes.splice(activeHandIndex, 1, null, null);
+
+    // Build new hasDoubled array: insert flag for second hand
+    const newHasDoubled = [...hasDoubled];
+    newHasDoubled.splice(activeHandIndex, 1, false, false);
 
     // Update state for split
     setBalance((prev) => prev - currentBet); // Deduct bet for second hand
     setDeck(workingDeck);
-    setHandBets(splitBets);
-    setHandOutcomes([null, null]);
-    setHasDoubled([false, false]);
-    setActiveHandIndex(0);
+    setHandBets(newBets);
+    setHandOutcomes(newOutcomes);
+    setHasDoubled(newHasDoubled);
+    // Keep activeHandIndex the same (it now points to the first of the split hands)
     setStatus("Hands split! Play the first hand.");
-    setPlayerHands(splitHands.map((hand) => [...hand]));
+    setPlayerHands(newHands.map((hand) => [...hand]));
 
     // Deal card to first hand with animation
     setIsDealing(true);
     await sleep(DEAL_DELAY);
-    splitHands[0] = [...splitHands[0], firstDraw.card];
+    newHands[activeHandIndex] = [...newHands[activeHandIndex], firstDraw.card];
     setLastDealtId(firstDraw.card.instanceId);
     setHighlightedCardId(firstDraw.card.instanceId);
-    setPlayerHands(splitHands.map((hand) => [...hand]));
+    setPlayerHands(newHands.map((hand) => [...hand]));
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     await waitForAnimation(firstDraw.card.instanceId);
     if (highlightTimeoutRef.current) {
@@ -490,10 +507,10 @@ export const useBlackjackGame = () => {
 
     // Deal card to second hand with animation
     await sleep(DEAL_DELAY);
-    splitHands[1] = [...splitHands[1], secondDraw.card];
+    newHands[activeHandIndex + 1] = [...newHands[activeHandIndex + 1], secondDraw.card];
     setLastDealtId(secondDraw.card.instanceId);
     setHighlightedCardId(secondDraw.card.instanceId);
-    setPlayerHands(splitHands.map((hand) => [...hand]));
+    setPlayerHands(newHands.map((hand) => [...hand]));
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     await waitForAnimation(secondDraw.card.instanceId);
     if (highlightTimeoutRef.current) {
@@ -504,7 +521,7 @@ export const useBlackjackGame = () => {
       highlightTimeoutRef.current = null;
     }, HIGHLIGHT_TIMEOUT_MS);
     setIsDealing(false);
-  }, [balance, deck, handBets, isDealing, playerHands, roundOver]);
+  }, [activeHandIndex, balance, deck, handBets, hasDoubled, handOutcomes, isDealing, playerHands, roundOver]);
 
   // Computed values: Determine if actions are available
   const activeHand = playerHands[activeHandIndex];
@@ -519,11 +536,35 @@ export const useBlackjackGame = () => {
   const canSplit =
     !roundOver &&
     !isDealing &&
-    playerHands.length === 1 && // Can only split if you have one hand
-    playerHands[0]?.length === BLACKJACK_HAND_LENGTH && // Must have exactly 2 cards
-    playerHands[0][0].rank === playerHands[0][1].rank && // Cards must match
-    (handBets[0] ?? 0) > 0 &&
-    balance >= (handBets[0] ?? 0); // Need balance for second bet
+    !!activeHand &&
+    activeHand.length === BLACKJACK_HAND_LENGTH && // Must have exactly 2 cards
+    activeHand[0].value === activeHand[1].value && // Cards must have same value
+    (handBets[activeHandIndex] ?? 0) > 0 &&
+    balance >= (handBets[activeHandIndex] ?? 0); // Need balance for second bet
+
+  /**
+   * Resets the game by resetting balance to starting amount and clearing all game state.
+   */
+  const resetGame = useCallback(() => {
+    setBalance(STARTING_BALANCE);
+    setBetAmount(MIN_BET);
+    setPlayerHands([]);
+    setHandBets([]);
+    setHandOutcomes([]);
+    setActiveHandIndex(0);
+    setDealerHand([]);
+    setStatus("Place your bet to begin.");
+    setRoundOver(true);
+    setIsDealing(false);
+    setLastDealtId(null);
+    setHighlightedCardId(null);
+    setDealerHoleRevealed(false);
+    setHasDoubled([]);
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+      highlightTimeoutRef.current = null;
+    }
+  }, []);
 
   return {
     // State
@@ -551,6 +592,7 @@ export const useBlackjackGame = () => {
     handleStand,
     handleDouble,
     handleSplit,
+    resetGame,
   };
 };
 

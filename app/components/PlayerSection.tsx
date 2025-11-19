@@ -9,6 +9,8 @@ type PlayerSectionProps = {
   handOutcomes: HandOutcome[];
   activeHandIndex: number;
   roundOver: boolean;
+  isDealing: boolean;
+  dealerHoleRevealed: boolean;
   lastDealtId?: string | null;
   highlightedCardId?: string | null;
 };
@@ -20,9 +22,14 @@ export const PlayerSection = ({
   handOutcomes,
   activeHandIndex,
   roundOver,
+  isDealing,
+  dealerHoleRevealed,
   lastDealtId,
   highlightedCardId,
 }: PlayerSectionProps) => {
+  // Determine if it's the dealer's turn: isDealing is true, player has hands, round isn't over, and dealer's hole card is revealed
+  // This means the dealer is actively playing (not initial dealing)
+  const isDealerTurn = isDealing && playerHands.length > 0 && !roundOver && dealerHoleRevealed;
   return (
     <div className="rounded-2xl border border-emerald-800 bg-emerald-900/40 p-6">
       <p className="text-sm uppercase tracking-[0.2em] text-emerald-400">Player</p>
@@ -34,14 +41,14 @@ export const PlayerSection = ({
             <div
               key={`hand-${index}`}
               className={`rounded-xl border p-4 ${
-                index === activeHandIndex && !roundOver
+                index === activeHandIndex && !roundOver && !isDealerTurn
                   ? "border-emerald-400/80 bg-emerald-800/40"
                   : "border-emerald-900 bg-emerald-900/20"
               }`}
             >
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
                 Hand {index + 1}
-                {index === activeHandIndex && !roundOver ? " — Your turn" : ""}
+                {index === activeHandIndex && !roundOver && !isDealerTurn ? " — Your turn" : ""}
               </p>
               <p className="text-xs text-emerald-200">Bet: ${handBets[index] ?? 0}</p>
               <div className="mt-3 flex flex-wrap gap-3">

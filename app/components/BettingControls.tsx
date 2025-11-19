@@ -6,6 +6,7 @@ type BettingControlsProps = {
   betAmount: number;
   onBetAmountChange: (amount: number) => void;
   onDeal: () => void;
+  onStartOver: () => void;
   roundOver: boolean;
   isDealing: boolean;
 };
@@ -15,10 +16,12 @@ export const BettingControls = ({
   betAmount,
   onBetAmountChange,
   onDeal,
+  onStartOver,
   roundOver,
   isDealing,
 }: BettingControlsProps) => {
-  const dealDisabled = !roundOver || isDealing || balance < MIN_BET || normalizeBet(betAmount) > balance;
+  const isGameOver = balance < MIN_BET;
+  const dealDisabled = !roundOver || isDealing || (!isGameOver && (balance < MIN_BET || normalizeBet(betAmount) > balance));
 
   return (
     <section className="mb-8 grid gap-4 rounded-2xl border border-emerald-800 bg-emerald-900/40 p-6 md:grid-cols-2">
@@ -39,7 +42,7 @@ export const BettingControls = ({
             step={BET_STEP}
             value={betAmount}
             onChange={(event) => onBetAmountChange(normalizeBet(Number(event.target.value)))}
-            disabled={!roundOver}
+            disabled={!roundOver || isGameOver}
             className="flex-1 accent-emerald-400"
           />
           <input
@@ -48,18 +51,18 @@ export const BettingControls = ({
             max={MAX_BET}
             step={BET_STEP}
             value={betAmount}
-            onChange={(event) => onBetAmountChange(normalizeBet(Number(event.target.value)))}
-            disabled={!roundOver}
+            readOnly
+            disabled={!roundOver || isGameOver}
             className="w-20 rounded-lg border border-emerald-700 bg-emerald-950/60 px-3 py-2 text-white"
           />
         </div>
         <button
           type="button"
           className="mt-3 w-full cursor-pointer rounded-full bg-emerald-500 px-6 py-3 text-base font-semibold text-emerald-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-800 disabled:text-emerald-300"
-          onClick={onDeal}
-          disabled={dealDisabled}
+          onClick={isGameOver ? onStartOver : onDeal}
+          disabled={dealDisabled && !isGameOver}
         >
-          Deal
+          {isGameOver ? "Start Over" : "Deal"}
         </button>
       </div>
     </section>

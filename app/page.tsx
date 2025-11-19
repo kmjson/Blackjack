@@ -32,6 +32,7 @@ export default function Home() {
     handleStand,
     handleDouble,
     handleSplit,
+    resetGame,
   } = useBlackjackGame();
 
   return (
@@ -48,6 +49,7 @@ export default function Home() {
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
           onDeal={startRound}
+          onStartOver={resetGame}
           roundOver={roundOver}
           isDealing={isDealing}
         />
@@ -69,6 +71,8 @@ export default function Home() {
             handOutcomes={handOutcomes}
             activeHandIndex={activeHandIndex}
             roundOver={roundOver}
+            isDealing={isDealing}
+            dealerHoleRevealed={dealerHoleRevealed}
             lastDealtId={lastDealtId}
             highlightedCardId={highlightedCardId}
           />

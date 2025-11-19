@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BettingControls } from "../BettingControls";
 import { MIN_BET, MAX_BET } from "../../constants";
@@ -9,6 +9,7 @@ describe("BettingControls", () => {
     betAmount: 50,
     onBetAmountChange: jest.fn(),
     onDeal: jest.fn(),
+    onStartOver: jest.fn(),
     roundOver: true,
     isDealing: false,
   };
@@ -41,14 +42,12 @@ describe("BettingControls", () => {
     expect(slider).toHaveAttribute("max", String(MAX_BET));
   });
 
-  it("should call onBetAmountChange when number input changes", async () => {
-    const user = userEvent.setup();
+  it("should call onBetAmountChange when slider changes", () => {
     const onBetAmountChange = jest.fn();
     render(<BettingControls {...defaultProps} onBetAmountChange={onBetAmountChange} />);
     
-    const numberInput = screen.getByRole("spinbutton");
-    await user.clear(numberInput);
-    await user.type(numberInput, "30");
+    const slider = screen.getByRole("slider") as HTMLInputElement;
+    fireEvent.change(slider, { target: { value: "30" } });
     
     expect(onBetAmountChange).toHaveBeenCalled();
   });
@@ -82,6 +81,37 @@ describe("BettingControls", () => {
     const numberInput = screen.getByRole("spinbutton");
     expect(slider).toBeDisabled();
     expect(numberInput).toBeDisabled();
+  });
+
+  it("should show 'Start Over' button when balance is below minimum", () => {
+    render(<BettingControls {...defaultProps} balance={5} />);
+    const button = screen.getByRole("button", { name: /start over/i });
+    expect(button).toBeInTheDocument();
+  });
+
+  it("should call onStartOver when 'Start Over' button is clicked", async () => {
+    const user = userEvent.setup();
+    const onStartOver = jest.fn();
+    render(<BettingControls {...defaultProps} balance={5} onStartOver={onStartOver} />);
+    
+    const button = screen.getByRole("button", { name: /start over/i });
+    await user.click(button);
+    
+    expect(onStartOver).toHaveBeenCalledTimes(1);
+  });
+
+  it("should disable inputs when game is over", () => {
+    render(<BettingControls {...defaultProps} balance={5} />);
+    const slider = screen.getByRole("slider");
+    const numberInput = screen.getByRole("spinbutton");
+    expect(slider).toBeDisabled();
+    expect(numberInput).toBeDisabled();
+  });
+
+  it("should enable 'Start Over' button when game is over", () => {
+    render(<BettingControls {...defaultProps} balance={5} />);
+    const button = screen.getByRole("button", { name: /start over/i });
+    expect(button).not.toBeDisabled();
   });
 });
 
